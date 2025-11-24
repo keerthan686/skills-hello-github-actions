@@ -107,7 +107,7 @@ jobs:
               print(f"Translation complete! Output saved to {output_file}")
 
               # Also write a summary
-              with open('translation_summary.txt', 'w') as f:
+              with open('translation_summary.txt', 'w', encoding='utf-8') as f:
                   f.write(f"Source file: {source_file}\n")
                   f.write(f"Source language: {source_lang}\n")
                   f.write(f"Output file: {output_file}\n")
@@ -144,10 +144,10 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          # Add the specific translated file
+          # Add the specific translated file (not the summary, it's for artifacts only)
           OUTPUT_FILE="${{ steps.translate.outputs.output_file }}"
           if [ -f "${OUTPUT_FILE}" ]; then
-            git add "${OUTPUT_FILE}" translation_summary.txt
+            git add "${OUTPUT_FILE}"
           fi
 
           # Check if there are changes to commit

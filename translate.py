@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
-Test script for the translation functionality
+Standalone translation script for README files.
+Translates README files from any language to English using Google Translate.
 """
 import sys
 import os
@@ -35,7 +36,8 @@ def translate_text(text, source_lang='auto', target_lang='en'):
 
         return '\n\n'.join(translated_paragraphs)
     except Exception as e:
-        print(f"Translation error: {e}")
+        print(f"Translation error (check internet connection and file format): {e}")
+        print("The original content will be returned unchanged.")
         return text
 
 def main():

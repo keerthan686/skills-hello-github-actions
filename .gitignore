@@ -40,3 +40,8 @@ Thumbs.db
 ###############################
 translation_summary.txt
 .translation_output.txt
+
+# Python cache #
+################
+__pycache__/
+*.pyc

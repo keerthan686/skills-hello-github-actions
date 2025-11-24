@@ -28,6 +28,10 @@ Here's a recap of all the tasks you've accomplished in your repository:
 - Learn more about GitHub by reading the "[Get started](https://docs.github.com/get-started)" docs
 - To find projects to contribute to, check out [GitHub Explore](https://github.com/explore)
 
+### 🌍 Translation Agent
+
+This repository includes an automated translation agent that can translate README files from any language to English! See [TRANSLATION_GUIDE.md](TRANSLATION_GUIDE.md) for details on how to use it.
+
 <footer>
 
 ---

@@ -1,0 +1,115 @@
+name: Translate README to English
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_file:
+        description: 'Path to the README file to translate'
+        required: false
+        default: 'README.md'
+      source_language:
+        description: 'Source language code (e.g., es, fr, de, auto for auto-detect)'
+        required: false
+        default: 'auto'
+  push:
+    paths:
+      - 'README*.md'
+      - '**/*README*.md'
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  translate:
+    name: Translate README to English
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install deep-translator
+
+      - name: Run translation
+        id: translate
+        run: |
+          SOURCE_FILE="${{ github.event.inputs.source_file || 'README.md' }}"
+          SOURCE_LANG="${{ github.event.inputs.source_language || 'auto' }}"
+
+          echo "Translating ${SOURCE_FILE} from ${SOURCE_LANG} to English..."
+          python translate.py "${SOURCE_FILE}" "${SOURCE_LANG}"
+
+          # Check if translation was successful and capture output filename
+          if [ -f translation_summary.txt ] && [ -f .translation_output.txt ]; then
+            cat translation_summary.txt
+            # Read the output filename from the machine-readable file
+            OUTPUT_FILE=$(cat .translation_output.txt)
+            echo "output_file=${OUTPUT_FILE}" >> $GITHUB_OUTPUT
+            echo "translation_success=true" >> $GITHUB_OUTPUT
+          else
+            echo "translation_success=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit translated README
+        if: steps.translate.outputs.translation_success == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Add the specific translated file (not the summary, it's for artifacts only)
+          OUTPUT_FILE="${{ steps.translate.outputs.output_file }}"
+          if [ -f "${OUTPUT_FILE}" ]; then
+            git add "${OUTPUT_FILE}"
+          fi
+
+          # Check if there are changes to commit
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Add English translation of README"
+            git push
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create Pull Request (if on feature branch)
+        if: steps.translate.outputs.translation_success == 'true' && github.ref != 'refs/heads/main'
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: Add English translation of README
+          title: "📝 Add English Translation of README"
+          body: |
+            ## README Translation to English
+
+            This PR adds an English translation of the README file.
+
+            **Translation Details:**
+            - Source file: ${{ github.event.inputs.source_file || 'README.md' }}
+            - Source language: ${{ github.event.inputs.source_language || 'auto-detected' }}
+            - Target language: English
+
+            The translation was performed automatically using the translate-readme workflow.
+          branch: translation-${{ github.run_number }}
+          delete-branch: true
+
+      - name: Upload translation summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: translation-summary
+          path: |
+            translation_summary.txt
+            ${{ steps.translate.outputs.output_file }}
+          retention-days: 30

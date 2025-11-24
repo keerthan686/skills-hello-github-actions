@@ -39,7 +39,6 @@ jobs:
       - name: Install dependencies
         run: |
           pip install --upgrade pip
-          pip install googletrans==4.0.0rc1
           pip install deep-translator
 
       - name: Create translation script
@@ -128,9 +127,12 @@ jobs:
           echo "Translating ${SOURCE_FILE} from ${SOURCE_LANG} to English..."
           python translate.py "${SOURCE_FILE}" "${SOURCE_LANG}"
 
-          # Check if translation was successful
+          # Check if translation was successful and capture output filename
           if [ -f translation_summary.txt ]; then
             cat translation_summary.txt
+            # Extract the output filename from the summary
+            OUTPUT_FILE=$(grep "Output file:" translation_summary.txt | cut -d' ' -f3)
+            echo "output_file=${OUTPUT_FILE}" >> $GITHUB_OUTPUT
             echo "translation_success=true" >> $GITHUB_OUTPUT
           else
             echo "translation_success=false" >> $GITHUB_OUTPUT
@@ -142,8 +144,11 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          # Add the translated file
-          git add *.en.md translation_summary.txt
+          # Add the specific translated file
+          OUTPUT_FILE="${{ steps.translate.outputs.output_file }}"
+          if [ -f "${OUTPUT_FILE}" ]; then
+            git add "${OUTPUT_FILE}" translation_summary.txt
+          fi
 
           # Check if there are changes to commit
           if git diff --staged --quiet; then
@@ -183,5 +188,5 @@ jobs:
           name: translation-summary
           path: |
             translation_summary.txt
-            *.en.md
+            ${{ steps.translate.outputs.output_file }}
           retention-days: 30

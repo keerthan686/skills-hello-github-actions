@@ -65,7 +65,7 @@ def main():
     print(f"Translation complete! Output saved to {output_file}")
 
     # Also write a summary
-    with open('translation_summary.txt', 'w') as f:
+    with open('translation_summary.txt', 'w', encoding='utf-8') as f:
         f.write(f"Source file: {source_file}\n")
         f.write(f"Source language: {source_lang}\n")
         f.write(f"Output file: {output_file}\n")

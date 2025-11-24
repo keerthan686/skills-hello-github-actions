@@ -39,3 +39,4 @@ Thumbs.db
 # Translation temporary files #
 ###############################
 translation_summary.txt
+.translation_output.txt

@@ -23,15 +23,15 @@ def translate_text(text, source_lang='auto', target_lang='en'):
             if len(para) <= max_length:
                 translated_paragraphs.append(translator.translate(para))
             else:
-                # Split long paragraphs into sentences
-                sentences = para.split('\n')
-                translated_sentences = []
-                for sentence in sentences:
-                    if sentence.strip():
-                        translated_sentences.append(translator.translate(sentence))
+                # Split long paragraphs by newlines (for markdown structure)
+                lines = para.split('\n')
+                translated_lines = []
+                for line in lines:
+                    if line.strip():
+                        translated_lines.append(translator.translate(line))
                     else:
-                        translated_sentences.append('')
-                translated_paragraphs.append('\n'.join(translated_sentences))
+                        translated_lines.append('')
+                translated_paragraphs.append('\n'.join(translated_lines))
 
         return '\n\n'.join(translated_paragraphs)
     except Exception as e:
@@ -71,6 +71,10 @@ def main():
         f.write(f"Output file: {output_file}\n")
         f.write(f"Original size: {len(content)} characters\n")
         f.write(f"Translated size: {len(translated_content)} characters\n")
+
+    # Write output file for shell script parsing (machine-readable)
+    with open('.translation_output.txt', 'w', encoding='utf-8') as f:
+        f.write(output_file)
 
 if __name__ == '__main__':
     main()

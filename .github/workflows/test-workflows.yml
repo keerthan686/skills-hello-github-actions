@@ -1,0 +1,135 @@
+name: Test GitHub Actions Workflows
+
+# Run tests on push and pull requests
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/**'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/**'
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  validate-workflows:
+    name: Validate Workflow Files
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate YAML syntax
+        run: |
+          echo "Validating YAML syntax of workflow files..."
+          WORKFLOW_DIR=".github/workflows"
+          shopt -s nullglob
+          files=("$WORKFLOW_DIR"/*.yml "$WORKFLOW_DIR"/*.yaml)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "No workflow files found"
+            exit 0
+          fi
+          for file in "${files[@]}"; do
+            echo "Checking $file"
+            python3 -c "import yaml; yaml.safe_load(open('$file'))" || { echo "Invalid YAML in $file"; exit 1; }
+          done
+          echo "All workflow files have valid YAML syntax."
+
+      - name: Check workflow structure
+        run: |
+          echo "Checking workflow structure..."
+          WORKFLOW_DIR=".github/workflows"
+          shopt -s nullglob
+          files=("$WORKFLOW_DIR"/*.yml "$WORKFLOW_DIR"/*.yaml)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "No workflow files found"
+            exit 0
+          fi
+          for file in "${files[@]}"; do
+            echo "Validating structure of $file"
+            # Check for required top-level keys using grep
+            if ! grep -q "^name:" "$file"; then
+              echo "Warning: $file is missing 'name' key"
+            fi
+            if ! grep -q "^on:" "$file"; then
+              echo "Error: $file is missing 'on' trigger"
+              exit 1
+            fi
+            if ! grep -q "^jobs:" "$file"; then
+              echo "Error: $file is missing 'jobs' section"
+              exit 1
+            fi
+          done
+          echo "All workflow files have valid structure."
+
+      - name: Run actionlint
+        uses: reviewdog/action-actionlint@v1.65.0
+        with:
+          fail_on_error: true
+          reporter: github-pr-review
+
+  test-workflow-logic:
+    name: Test Workflow Logic
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Verify step file exists
+        run: |
+          # This step file is specific to this GitHub Skills course repository
+          # It tracks the learner's progress through the course steps
+          STEP_FILE=".github/steps/-step.txt"
+          if [ ! -f "$STEP_FILE" ]; then
+            echo "Error: Step file $STEP_FILE not found"
+            exit 1
+          fi
+          echo "Step file exists with content: $(cat $STEP_FILE)"
+
+      - name: Check for required actions
+        run: |
+          echo "Checking for required GitHub Actions..."
+          WORKFLOW_DIR=".github/workflows"
+          shopt -s nullglob
+          files=("$WORKFLOW_DIR"/*.yml "$WORKFLOW_DIR"/*.yaml)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "No workflow files found"
+            exit 0
+          fi
+          # Check for actions/checkout usage
+          for file in "${files[@]}"; do
+            if grep -q "jobs:" "$file"; then
+              if grep -E "uses:\s*actions/checkout" "$file" > /dev/null; then
+                echo "$file has checkout action"
+              else
+                echo "Warning: $file may be missing checkout action"
+              fi
+            fi
+          done
+          echo "Action checks completed."
+
+      - name: Validate permissions
+        run: |
+          echo "Validating workflow permissions..."
+          WORKFLOW_DIR=".github/workflows"
+          shopt -s nullglob
+          files=("$WORKFLOW_DIR"/*.yml "$WORKFLOW_DIR"/*.yaml)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "No workflow files found"
+            exit 0
+          fi
+          for file in "${files[@]}"; do
+            if grep -q "^permissions:" "$file"; then
+              echo "$file has explicit permissions defined (good practice)"
+            else
+              echo "Note: $file does not have explicit permissions"
+            fi
+          done
+          echo "Permission validation completed."

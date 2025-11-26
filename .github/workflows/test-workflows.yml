@@ -14,6 +14,10 @@ on:
     paths:
       - '.github/workflows/**'
 
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
   validate-workflows:
     name: Validate Workflow Files
@@ -25,21 +29,20 @@ jobs:
       - name: Validate YAML syntax
         run: |
           echo "Validating YAML syntax of workflow files..."
-          for file in .github/workflows/*.yml; do
+          WORKFLOW_DIR=".github/workflows"
+          for file in "$WORKFLOW_DIR"/*.yml; do
             echo "Checking $file"
-            if ! python3 -c "import yaml; yaml.safe_load(open('$file'))"; then
-              echo "Invalid YAML in $file"
-              exit 1
-            fi
+            python3 -c "import yaml; yaml.safe_load(open('$file'))" || { echo "Invalid YAML in $file"; exit 1; }
           done
           echo "All workflow files have valid YAML syntax."
 
       - name: Check workflow structure
         run: |
           echo "Checking workflow structure..."
-          for file in .github/workflows/*.yml; do
+          WORKFLOW_DIR=".github/workflows"
+          for file in "$WORKFLOW_DIR"/*.yml; do
             echo "Validating structure of $file"
-            # Check for required top-level keys
+            # Check for required top-level keys using grep
             if ! grep -q "^name:" "$file"; then
               echo "Warning: $file is missing 'name' key"
             fi
@@ -55,7 +58,7 @@ jobs:
           echo "All workflow files have valid structure."
 
       - name: Run actionlint
-        uses: reviewdog/action-actionlint@v1
+        uses: reviewdog/action-actionlint@v1.65.0
         with:
           fail_on_error: true
           reporter: github-pr-review
@@ -69,19 +72,27 @@ jobs:
 
       - name: Verify step file exists
         run: |
-          if [ ! -f ".github/steps/-step.txt" ]; then
-            echo "Error: Step file .github/steps/-step.txt not found"
+          # This step file is specific to this GitHub Skills course repository
+          # It tracks the learner's progress through the course steps
+          STEP_FILE=".github/steps/-step.txt"
+          if [ ! -f "$STEP_FILE" ]; then
+            echo "Error: Step file $STEP_FILE not found"
             exit 1
           fi
-          echo "Step file exists with content: $(cat .github/steps/-step.txt)"
+          echo "Step file exists with content: $(cat $STEP_FILE)"
 
       - name: Check for required actions
         run: |
           echo "Checking for required GitHub Actions..."
-          # Verify checkout action is used
-          for file in .github/workflows/*.yml; do
-            if grep -q "jobs:" "$file" && ! grep -q "actions/checkout" "$file"; then
-              echo "Warning: $file may be missing checkout action"
+          WORKFLOW_DIR=".github/workflows"
+          # Check for actions/checkout usage using grep on YAML 'uses:' lines
+          for file in "$WORKFLOW_DIR"/*.yml; do
+            if grep -q "jobs:" "$file"; then
+              if grep -E "^\s+uses:\s*actions/checkout" "$file" > /dev/null; then
+                echo "$file has checkout action"
+              else
+                echo "Warning: $file may be missing checkout action"
+              fi
             fi
           done
           echo "Action checks completed."
@@ -89,8 +100,9 @@ jobs:
       - name: Validate permissions
         run: |
           echo "Validating workflow permissions..."
-          for file in .github/workflows/*.yml; do
-            if grep -q "permissions:" "$file"; then
+          WORKFLOW_DIR=".github/workflows"
+          for file in "$WORKFLOW_DIR"/*.yml; do
+            if grep -q "^permissions:" "$file"; then
               echo "$file has explicit permissions defined (good practice)"
             else
               echo "Note: $file does not have explicit permissions"

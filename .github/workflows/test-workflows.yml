@@ -30,7 +30,13 @@ jobs:
         run: |
           echo "Validating YAML syntax of workflow files..."
           WORKFLOW_DIR=".github/workflows"
-          for file in "$WORKFLOW_DIR"/*.yml; do
+          shopt -s nullglob
+          files=("$WORKFLOW_DIR"/*.yml "$WORKFLOW_DIR"/*.yaml)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "No workflow files found"
+            exit 0
+          fi
+          for file in "${files[@]}"; do
             echo "Checking $file"
             python3 -c "import yaml; yaml.safe_load(open('$file'))" || { echo "Invalid YAML in $file"; exit 1; }
           done
@@ -40,7 +46,13 @@ jobs:
         run: |
           echo "Checking workflow structure..."
           WORKFLOW_DIR=".github/workflows"
-          for file in "$WORKFLOW_DIR"/*.yml; do
+          shopt -s nullglob
+          files=("$WORKFLOW_DIR"/*.yml "$WORKFLOW_DIR"/*.yaml)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "No workflow files found"
+            exit 0
+          fi
+          for file in "${files[@]}"; do
             echo "Validating structure of $file"
             # Check for required top-level keys using grep
             if ! grep -q "^name:" "$file"; then
@@ -85,10 +97,16 @@ jobs:
         run: |
           echo "Checking for required GitHub Actions..."
           WORKFLOW_DIR=".github/workflows"
-          # Check for actions/checkout usage using grep on YAML 'uses:' lines
-          for file in "$WORKFLOW_DIR"/*.yml; do
+          shopt -s nullglob
+          files=("$WORKFLOW_DIR"/*.yml "$WORKFLOW_DIR"/*.yaml)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "No workflow files found"
+            exit 0
+          fi
+          # Check for actions/checkout usage
+          for file in "${files[@]}"; do
             if grep -q "jobs:" "$file"; then
-              if grep -E "^\s+uses:\s*actions/checkout" "$file" > /dev/null; then
+              if grep -E "uses:\s*actions/checkout" "$file" > /dev/null; then
                 echo "$file has checkout action"
               else
                 echo "Warning: $file may be missing checkout action"
@@ -101,7 +119,13 @@ jobs:
         run: |
           echo "Validating workflow permissions..."
           WORKFLOW_DIR=".github/workflows"
-          for file in "$WORKFLOW_DIR"/*.yml; do
+          shopt -s nullglob
+          files=("$WORKFLOW_DIR"/*.yml "$WORKFLOW_DIR"/*.yaml)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "No workflow files found"
+            exit 0
+          fi
+          for file in "${files[@]}"; do
             if grep -q "^permissions:" "$file"; then
               echo "$file has explicit permissions defined (good practice)"
             else
